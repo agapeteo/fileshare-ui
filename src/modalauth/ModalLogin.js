@@ -18,7 +18,11 @@ const ModalLogin = ({authContext}) => {
 
   const handleLogin = async () => {
     console.log(`login fn`);
+
+    setUser("");
+    setPwd("");
     setLoginErr("");
+
     try {
       let response = await ctx.loginFn(user, pwd);
 
