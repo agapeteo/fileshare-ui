@@ -6,7 +6,7 @@ import './scss/style.scss'
 
 import ModalAuth from "./modalauth/ModalAuth";
 import LoginApi from "./api/LoginApi";
-import {initModalAuthState, useModalAuth, useTestAuth} from "./modalauth/InitAuthState";
+import {initModalAuthState, useModalAuth} from "./modalauth/InitAuthState";
 
 
 const loading = (
@@ -52,7 +52,6 @@ const App = () => {
             <Route exact path="/noauth" name="No auth" element={<TestComponent text={"No auth"}/>}/>
 
             <Route path="/" name="Home" element={<h2>welcome home</h2>}/>
-
           </Routes>
         </Suspense>
       </HashRouter>

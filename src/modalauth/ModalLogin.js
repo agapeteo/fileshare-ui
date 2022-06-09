@@ -19,12 +19,13 @@ const ModalLogin = ({authContext}) => {
   const handleLogin = async () => {
     console.log(`login fn`);
 
-    setUser("");
-    setPwd("");
     setLoginErr("");
 
     try {
       let response = await ctx.loginFn(user, pwd);
+
+      setUser("");
+      setPwd("");
 
       sessionStorage.setItem(STORE_USER_KEY, user);
       sessionStorage.setItem(STORE_ACCESS_TOKEN_KEY, response.access);
@@ -47,7 +48,11 @@ const ModalLogin = ({authContext}) => {
   }
 
   const signOut = () => {
-    console.log(`signed out`);
+    console.log(`signed out...`);
+
+    sessionStorage.removeItem(STORE_USER_KEY);
+    sessionStorage.removeItem(STORE_ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(STORE_REFRESH_TOKEN_KEY);
 
     if (timer) {
       clearInterval(timer);
@@ -58,13 +63,10 @@ const ModalLogin = ({authContext}) => {
 
     ctx.setCurUser(null);
     ctx.setAccessToken(null);
-
-    sessionStorage.removeItem(STORE_USER_KEY);
-    sessionStorage.removeItem(STORE_ACCESS_TOKEN_KEY);
-    sessionStorage.removeItem(STORE_REFRESH_TOKEN_KEY);
   }
 
   const startRefreshToken = async () => {
+    const storedUser = sessionStorage.getItem(STORE_USER_KEY);
     const refreshToken = sessionStorage.getItem(STORE_REFRESH_TOKEN_KEY);
     if (!refreshToken) {
       console.log("no refresh token. skipping");
@@ -74,7 +76,7 @@ const ModalLogin = ({authContext}) => {
       return;
     }
     try {
-      let response = await ctx.refreshTokenFn(user, refreshToken);
+      let response = await ctx.refreshTokenFn(storedUser, refreshToken);
       if (!response || !response.access) {
         signOut();
         return;
@@ -87,11 +89,11 @@ const ModalLogin = ({authContext}) => {
     }
   }
 
-  useEffect(() => {
+  useEffect( () => {
     const init = async () => {
       console.log(`initializing ModalLogin`);
 
-      ctx.setSignOutFn(() => () => signOut);
+      ctx.setSignOutFn(() => signOut);
 
       const curUser = sessionStorage.getItem(STORE_USER_KEY);
       const accessToken = sessionStorage.getItem(STORE_ACCESS_TOKEN_KEY);
@@ -108,7 +110,8 @@ const ModalLogin = ({authContext}) => {
       }
     }
 
-    init()
+    init();
+
     return () => {
       if (timer) {
         clearInterval(timer)
