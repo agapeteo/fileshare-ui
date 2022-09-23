@@ -7,6 +7,7 @@ import './scss/style.scss'
 import ModalAuth from "./modalauth/ModalAuth";
 import LoginApi from "./api/LoginApi";
 import {initModalAuthState, useModalAuth} from "./modalauth/InitAuthState";
+import MyFiles from "./views/files/MyFiles";
 
 
 const loading = (
@@ -31,7 +32,8 @@ const App = () => {
 
   // const modalAuthState = useModalAuth(LoginApi.fakeLogin, 5, LoginApi.fakeRefreshToken);
   // const modalAuthState = useModalAuth(LoginApi.login, 5, LoginApi.fakeRefreshToken);
-  const modalAuthState = useModalAuth(LoginApi.login, 5, LoginApi.refresh);
+  const modalAuthState = useModalAuth(LoginApi.login, 240, LoginApi.refresh);
+  // const modalAuthState = useModalAuth(LoginApi.login, 10, LoginApi.refresh);
 
   return (
     <ModalAuthContext.Provider value={modalAuthState}>
@@ -51,7 +53,7 @@ const App = () => {
 
             <Route exact path="/noauth" name="No auth" element={<TestComponent text={"No auth"}/>}/>
 
-            <Route path="/" name="Home" element={<h2>welcome home</h2>}/>
+            <Route path="/" name="Home" element={<ModalAuth authContext={ModalAuthContext}><MyFiles /></ModalAuth>}/>
           </Routes>
         </Suspense>
       </HashRouter>

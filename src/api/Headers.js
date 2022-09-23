@@ -1,10 +1,17 @@
 /* eslint-disable */
 
 const Headers = {
-  authJsonHeaders: (token) => {
+
+  authToken: (token) => {
     return {
-      "Content-Type": "application/json",
+      Authorization: "Bearer " + token
+    }
+  },
+
+  authTokenWithJson: (token) => {
+    return {
       Authorization: "Bearer " + token,
+      "Content-Type": "application/json"
     }
   },
 
