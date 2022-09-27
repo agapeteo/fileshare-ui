@@ -10,24 +10,43 @@ import {
 import React, { useContext, useState } from "react";
 import { ModalAuthContext } from "../../App";
 import FilesApi from "../../api/FilesApi";
+import UploadDropZone from "./UploadDropZone";
 
 const UploadFileModal = (props) => {
   const ctx = useContext(ModalAuthContext);
   const [curKey, setCurKey] = useState("");
   const [curValue, setCurValue] = useState("");
   const [metaArr, setMetaArr] = useState([]);
-  const [curFile, setCurFile] = useState();
   const [isLoading, setIsLoading] = useState(false);
+  const [files, uploadDropZoneFiles] = useState([]);
 
   const clear = () => {
     setCurKey("");
     setCurValue("");
     setMetaArr([]);
-    setCurFile(null);
-    setIsLoading(false);
+    uploadDropZoneFiles([]);
   };
 
-  const upload = async () => {
+  const uploadAll = async (files) => {
+    // console.log('files', files);
+    let results = [];
+    try {
+      setIsLoading(true);
+
+      results = files.map(async  file => {
+        const result = await upload(file);
+        return result;
+      });
+    } catch (e) {
+      console.log(e);
+    } finally {
+      props.handleUploadCompleted(results);
+      setIsLoading(false);
+      clear();
+    }
+  }
+
+  const upload = async (curFile) => {
     const formData = new FormData();
     formData.append("file", curFile);
 
@@ -42,12 +61,11 @@ const UploadFileModal = (props) => {
     }
 
     try {
-      setIsLoading(true)
-      const filePath = `${props.curDir}${curFile.name}`;
-      // console.log(`filePath: ${filePath}`);
+      const localPath = curFile.fullPath ? curFile.fullPath.substr(1) : curFile.name ;
+      const filePath = `${props.curDir}${localPath}`;
       const resp = await FilesApi.upload(ctx.accessToken, formData, filePath);
-      props.handleUploadCompleted(resp);
-      clear();
+
+      return resp;
     } catch (err) {
       console.log(`error during upload: ${JSON.stringify(err)}`);
     }
@@ -99,9 +117,11 @@ const UploadFileModal = (props) => {
           <CCol> <CButton onClick={() => newMeta()}>Add</CButton> </CCol>
         </CRow>
 
-        <CFormInput style={{ marginTop: 15, marginBottom: 20 }} type={"file"}  onChange={e => setCurFile(e.target.files[0])} />
+        <CFormInput style={{ marginTop: 15, marginBottom: 20 }} type={"file"} onChange={e => uploadDropZoneFiles([e.target.files[0]])} />
 
-        <CButton color={"info"} onClick={() => upload()} disabled={isLoading}>
+        <UploadDropZone uploadDropZoneFiles={uploadDropZoneFiles}/>
+
+        <CButton color={"info"} onClick={() => uploadAll(files)} disabled={isLoading}>
           {isLoading ?
             <>
               <CSpinner color={"warning"} />
@@ -109,7 +129,6 @@ const UploadFileModal = (props) => {
             : ""}
           Upload
         </CButton>
-
       </CModalBody>
     </CModal>
   );

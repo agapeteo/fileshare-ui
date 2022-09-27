@@ -6,6 +6,7 @@ import Headers from "./Headers";
 
 const fsUrl = `${Config.server}/fs/`;
 const uploadUrlPrefix = `${Config.server}/fs`;
+const uploadDirUrlPrefix = `${Config.server}/fs-delete-dir`;
 
 const FilesApi = {
   fsFiles: async (token) => {
@@ -24,6 +25,28 @@ const FilesApi = {
     return resp.data;
   },
 
+
+  deleteFile: async (token, filePath) => {
+    const config = {
+      headers: {
+        'content-type': 'multipart/form-data',
+        Authorization: "Bearer " + token,
+      },
+    };
+    const resp = await axios.delete(`${uploadUrlPrefix}${filePath}`, config);
+    return resp.data;
+  },
+
+  deleteDir: async (token, dirPath) => {
+    const config = {
+      headers: {
+        'content-type': 'multipart/form-data',
+        Authorization: "Bearer " + token,
+      },
+    };
+    const resp = await axios.delete(`${uploadDirUrlPrefix}${dirPath}`, config);
+    return resp.data;
+  },
 
 };
 
