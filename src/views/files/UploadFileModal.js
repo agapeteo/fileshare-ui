@@ -1,13 +1,22 @@
 /* eslint-disable */
 import {
-  CButton, CCol,
+  CButton,
+  CCol,
   CFormInput,
   CModal,
   CModalBody,
   CModalHeader,
-  CModalTitle, CRow, CSpinner, CTable, CTableBody, CTableDataCell, CTableHead, CTableHeaderCell, CTableRow
+  CModalTitle,
+  CRow,
+  CSpinner,
+  CTable,
+  CTableBody,
+  CTableDataCell,
+  CTableHead,
+  CTableHeaderCell,
+  CTableRow
 } from "@coreui/react";
-import React, { useContext, useState } from "react";
+import React, {useContext, useEffect, useState} from "react";
 import { ModalAuthContext } from "../../App";
 import FilesApi from "../../api/FilesApi";
 import UploadDropZone from "./UploadDropZone";
@@ -32,18 +41,22 @@ const UploadFileModal = (props) => {
     let results = [];
     try {
       setIsLoading(true);
-
+      // console.log(isLoading);
       results = files.map(async  file => {
         const result = await upload(file);
-        return result;
+        return await result;
       });
+
+      Promise.all(results).then(() => setIsLoading(false))
+
     } catch (e) {
       console.log(e);
     } finally {
       props.handleUploadCompleted(results);
-      setIsLoading(false);
       clear();
     }
+
+    // setIsLoading(false);
   }
 
   const upload = async (curFile) => {

@@ -1,16 +1,13 @@
 /* eslint-disable */
-import {useState, useEffect, useContext} from "react";
+import React, {useState, useEffect, useContext} from "react";
 import CIcon from '@coreui/icons-react';
 import {cilFolder, cilFile} from '@coreui/icons';
 
-import {
-  CButton,
-} from "@coreui/react";
+import {CButton} from "@coreui/react";
 import {ModalAuthContext} from "../../App";
 import FilesApi from "../../api/FilesApi";
 import Config from "../../api/Config";
 import UploadFileModal from "./UploadFileModal";
-
 
 const MyFiles = () => {
   const ctx = useContext(ModalAuthContext);
@@ -18,26 +15,65 @@ const MyFiles = () => {
   const [curDir, setCurDir] = useState('/');
   const [isLoading, setIsLoading] = useState(false);
   const [visibleUploadObjectModal, setVisibleUploadObjectModal] = useState(false);
-  const [selected, setSelected] = useState([]);
+  const [selected, setSelected] = useState(new Set());
+  const [selectedDir, setSelectedDir] = useState(new Set());
+  const [highlightedFile, setHighlightedFile] = useState("");
+  const [highlightedDir, setHighlightedDir] = useState("");
 
-  const deleteDir = async () => {
-    if(!window.confirm(`delete folder ${curDir}?`)) { return }
-    await FilesApi.deleteDir(ctx.accessToken, curDir);
-    setCurDir(toParent(curDir));
-    await fetchFs();
-    setSelected([]);
+  const deleteSelected = async () => {
+    const itemsCount = selected.size + selectedDir.size;
+    const selectedDirPath = selectedDir.size > 0 ? selectedDir.values().next().value : "";
+    const selectedFileName = selected.size > 0 ? selected.values().next().value : "";
+    const confirmationText = itemsCount > 1 ? `delete ${itemsCount} items?` : `delete ${selected.size > 0 ? selectedFileName : dirName(selectedDirPath)}?`;
+
+    if (!window.confirm(confirmationText)) {
+      return
+    }
+
+    const deletedFiles = selected.map(async file => { //todo: resolve promise for spinner
+      const filePath = `${curDir}${file}`;
+      const deletedFile = await FilesApi.deleteFile(ctx.accessToken, filePath);
+
+      return deletedFile;
+    })
+
+    const deletedDirs = selectedDir.map(async dir => {
+      const deletedDir = await FilesApi.deleteDir(ctx.accessToken, dir);
+      return deletedDir;
+    })
+
+    const deletedAll = [...deletedFiles, ...deletedDirs];
+    await Promise.all(deletedAll).then(async () => {
+      setSelected(new Set());
+      setSelectedDir(new Set());
+      await fetchFs();
+    });
   }
-  const deleteFile = async () => {
-    if(!window.confirm(`delete file ${selected[0]}?`)) { return }
-    const filePath = `${curDir}${selected[0]}`;
-    await FilesApi.deleteFile(ctx.accessToken, filePath);
-    await fetchFs();
-    setSelected([]);
+  const selectDir = (name, isMultiSelect) => {
+    const newSelected = isMultiSelect ? new Set(selectedDir) : new Set();
+    const newSelectedFiles = isMultiSelect ? new Set(selected) : new Set();
+
+    if (newSelected.has(name)) {
+      newSelected.delete(name);
+    } else {
+      newSelected.add(name);
+    }
+
+    setSelectedDir(newSelected);
+    setSelected(newSelectedFiles);
   }
-  const select = name => {
-    const newSelected = [];
-    newSelected.push(name);
+  const selectFile = (name, isMultiSelect) => {
+    const newSelected = isMultiSelect ? new Set(selected) : new Set();
+    const newSelectedDirs = isMultiSelect ? new Set(selectedDir) : new Set();
+
+    if (newSelected.has(name)) {
+      newSelected.delete(name);
+    } else {
+      newSelected.add(name);
+    }
+
     setSelected(newSelected);
+    setSelectedDir(newSelectedDirs);
   }
 
   const convertResp = (fs, dirJson) => {
@@ -86,7 +122,7 @@ const MyFiles = () => {
     // console.log(`id: ${id}`);
     // console.log(`hash: ${fileHash}`);
     const results = await Promise.all(newObjs);
-    console.log('results', results);
+    // console.log('results', results.length);
     await fetchFs();
   };
 
@@ -105,86 +141,113 @@ const MyFiles = () => {
         </button>
         {pathArr(curDir).map((pathObj, idx) => (
           <button key={idx} style={{margin: 3, borderRadius: 10, backgroundColor: "mintcream", padding: 10}}
-                  onClick={() => setCurDir(pathObj.path)}>
+                  onClick={() => setCurDir(pathObj.path)}
+          >
             <h5> {pathObj.name} </h5>
           </button>
         ))}
-        {
-          selected.length > 0
-            ? <a style={{marginLeft: 20, margin: 10}}
-                 href={`${Config.server}${curDir}${selected[0]}`}
-                 target={"_blank"}
-            >
-              <CButton color={"light"}>Download</CButton>
-            </a>
-            : ""
-        }
-        {
-          selected.length > 0
-            ? <CButton
-              color={"danger"}
-              onClick={() => deleteFile()}
-            >
-              Delete
-            </CButton>
-            : ""
-        }
-        {
-          curDir !== "/"
-            ? <CButton
-              color={"danger"}
-              onClick={() => deleteDir()}
-            >
-              Delete current folder
-            </CButton>
-            : ""
-        }
+
+        <a style={{marginLeft: 20, margin: 10}}
+           href={`${Config.server}${curDir}${selected.values().next().value}`}
+           target={"_blank"}
+        >
+          <CButton color={"light"} disabled={selected.size !== 1}>Download</CButton>
+        </a>
+        <CButton
+          color={"danger"}
+          variant={"outline"}
+          style={{marginLeft: 20, margin: 10}}
+          disabled={selected.size === 0 && selectedDir.size === 0}
+          onClick={() => deleteSelected()}
+        >
+          Delete
+        </CButton>
       </div>
 
       <div style={{position: "fixed", top: 20, right: 20}}>
         <CButton color={"light"} onClick={() => setVisibleUploadObjectModal(true)}>Upload</CButton>
       </div>
 
-      <div style={{
-        display: "flex",
-        flexDirection: "row",
-        padding: 10,
-        margin: 10,
-        flexWrap: "wrap",
-        border: 1,
-        borderRadius: 10,
-        borderStyle: "inset",
-        backgroundColor: "mintcream"
-      }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          padding: 10,
+          margin: 10,
+          flexWrap: "wrap",
+          border: 1,
+          borderRadius: 10,
+          borderStyle: "inset",
+          backgroundColor: "#f5fffa",
+        }}
+      >
 
         {isLoading ?
           <h2> Loading </h2>
           : null
         }
-        {fs[curDir] ? fs[curDir].dirs.map((dir, idx) => (
-          <div key={idx} style={{margin: 5, textAlign: "center", width: 150}} onClick={() => {
-            setCurDir(dir)
-          }}>
-            <CIcon icon={cilFolder} size={"3xl"} style={{color: "darkslateblue"}}/>
-            <p>{dirName(dir)}</p>
-          </div>
+        {fs[curDir] ? fs[curDir].dirs.map((dir, idx) => {
+          const decodeDirName = decodeURI(dir);
 
-        )) : ""}
+          return (
+            <div key={idx}
+                 style={{
+                   position: "relative",
+                   margin: 5, textAlign: "center", width: 155,
+                   backgroundColor: selectedDir.has(decodeDirName) ? "powderblue" : highlightedDir === decodeDirName ? "linen" : "",
+                 }}
+                 onDoubleClick={() => {
+                   setCurDir(decodeDirName)
+                 }}
+                 onClick={e => {
+                   selectDir(decodeDirName, e.metaKey)
+                 }}
+                 onMouseOver={e => {
+                   if (!selectedDir.has(decodeDirName)) {
+                     setHighlightedDir(decodeDirName);
+                   }
+                 }}
+                 onMouseOut={e => {
+                   if (!selectedDir.has(decodeDirName)) {
+                     setHighlightedDir("");
+                   }
+                 }}
+            >
+              <CIcon icon={cilFolder} size={"3xl"} style={{color: "darkslateblue"}}/>
+              <p>{dirName(decodeDirName)}</p>
+            </div>
 
-        {fs[curDir] ? fs[curDir].files.map((file, idx) => (
-          <div
-            key={idx}
-            style={{
-              margin: 10, textAlign: "center", width: 155,
-              backgroundColor: selected[0] && selected[0] === file.name ? "powderblue" : ""
-            }}
-            onClick={() => select(file.name)}
-          >
-            <CIcon icon={cilFile} size={"3xl"} style={{color: "darkolivegreen"}}/>
-            <p>{decodedAndStripped(file.name)}</p>
-          </div>
+          )
+        }) : ""}
 
-        )) : ""}
+        {fs[curDir] ? fs[curDir].files.map((file, idx) => {
+          const fileNameDecoded = decodeURI(file.name);
+
+          return (
+            <div
+              key={idx}
+              style={{
+                position: "relative",
+                margin: 10, textAlign: "center", width: 155,
+                backgroundColor: selected.has(fileNameDecoded) ? "powderblue" : highlightedFile === fileNameDecoded ? "linen" : "",
+              }}
+              onClick={e => selectFile(fileNameDecoded, e.metaKey)}
+              onMouseOver={e => {
+                if (!selected.has(fileNameDecoded)) {
+                  setHighlightedFile(fileNameDecoded);
+                }
+              }}
+              onMouseOut={e => {
+                if (!selected.has(fileNameDecoded)) {
+                  setHighlightedFile("");
+                }
+              }}
+            >
+              <CIcon icon={cilFile} size={"3xl"} style={{color: "darkolivegreen"}}/>
+              <p>{decodedAndStripped(file.name)}</p>
+            </div>
+          )
+        }) : ""}
       </div>
       <UploadFileModal
         curDir={curDir}
