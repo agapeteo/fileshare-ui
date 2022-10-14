@@ -63,7 +63,7 @@ const UploadDropZone = (props) => {
 
                 <div style={{
                   display: uploadedFiles.length === 0 ? 'none' : 'flex',
-                  flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center',
+                  flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start',
                   fontSize: '0.7em',
                   overflowY: "scroll",
                   height: "100%",

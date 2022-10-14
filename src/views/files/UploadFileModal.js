@@ -41,8 +41,13 @@ const UploadFileModal = (props) => {
     let results = [];
     try {
       setIsLoading(true);
-      // console.log(isLoading);
       results = files.map(async  file => {
+        if(file instanceof FileSystemFileEntry) {
+          const fullPath = file.fullPath;
+          file = await getFile(file);
+          file.fullPath = fullPath;
+        }
+
         const result = await upload(file);
         return await result;
       });
@@ -97,6 +102,14 @@ const UploadFileModal = (props) => {
     setCurValue("");
     setMetaArr(newArr);
   };
+
+  const getFile = async (fileEntry) => {
+    try {
+      return await new Promise((resolve, reject) => fileEntry.file(resolve, reject));
+    } catch (err) {
+      console.log(err);
+    }
+  }
 
   return (
     <CModal size={"lg"} visible={props.visible} onClose={props.closeUploadObjectModalFunc}>
