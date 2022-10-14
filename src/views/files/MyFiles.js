@@ -13,12 +13,49 @@ const MyFiles = () => {
   const ctx = useContext(ModalAuthContext);
   const [fs, setFs] = useState({});
   const [curDir, setCurDir] = useState('/');
+  const [sourceDir, setSourceDir] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [visibleUploadObjectModal, setVisibleUploadObjectModal] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [selectedDir, setSelectedDir] = useState(new Set());
+  const [copiedFile, setCopiedFile] = useState(new Set());
+  const [copiedDir, setCopiedDir] = useState(new Set());
   const [highlightedFile, setHighlightedFile] = useState("");
   const [highlightedDir, setHighlightedDir] = useState("");
+
+  const copySelected = async () => {
+    const copiedFile = new Set([...selected.values()]);
+    const copiedDir = new Set([...selectedDir.values()]);
+    setSourceDir(curDir);
+    setCopiedFile(copiedFile);
+    setCopiedDir(copiedDir);
+  }
+
+  const pasteSelected = async () => {
+    const copiedFiles = copiedFile.map(async file => { //todo: resolve promise for spinner
+      const data = {from: `${sourceDir}${file}`, to: `${curDir}`}
+      const copiedFile = await FilesApi.copyFile(ctx.accessToken, data);
+
+      return copiedFile;
+    })
+
+    const copiedDirs = copiedDir.map(async dir => {
+      const copiedDirName = dirName(dir);
+      const data = {from: `${sourceDir}${copiedDirName}/`, to: `${curDir}`}
+      const copiedDir = await FilesApi.copyDir(ctx.accessToken, data);
+
+      return copiedDir;
+    })
+
+    const deletedAll = [...copiedFiles, ...copiedDirs];
+    await Promise.all(deletedAll).then(async () => {
+      await fetchFs();
+      setCopiedFile(new Set());
+      setCopiedDir(new Set());
+      setSelected(new Set());
+      setSelectedDir(new Set());
+    });
+  }
 
   const deleteSelected = async () => {
     const itemsCount = selected.size + selectedDir.size;
@@ -49,6 +86,7 @@ const MyFiles = () => {
       await fetchFs();
     });
   }
+
   const selectDir = (name, isMultiSelect) => {
     const newSelected = isMultiSelect ? new Set(selectedDir) : new Set();
     const newSelectedFiles = isMultiSelect ? new Set(selected) : new Set();
@@ -62,6 +100,7 @@ const MyFiles = () => {
     setSelectedDir(newSelected);
     setSelected(newSelectedFiles);
   }
+
   const selectFile = (name, isMultiSelect) => {
     const newSelected = isMultiSelect ? new Set(selected) : new Set();
     const newSelectedDirs = isMultiSelect ? new Set(selectedDir) : new Set();
@@ -162,6 +201,24 @@ const MyFiles = () => {
         >
           Delete
         </CButton>
+        <CButton
+          color={"danger"}
+          variant={"outline"}
+          style={{marginLeft: 20, margin: 10}}
+          disabled={selected.size + selectedDir.size === 0}
+          onClick={() => copySelected()}
+        >
+          Copy
+        </CButton>
+        <CButton
+          color={"danger"}
+          variant={"outline"}
+          style={{marginLeft: 20, margin: 10}}
+          disabled={copiedFile.size + copiedDir.size === 0 || sourceDir === curDir}
+          onClick={() => pasteSelected()}
+        >
+          Paste
+        </CButton>
       </div>
 
       <div style={{position: "fixed", top: 20, right: 20}}>
@@ -197,7 +254,7 @@ const MyFiles = () => {
                    backgroundColor: selectedDir.has(decodeDirName) ? "powderblue" : highlightedDir === decodeDirName ? "linen" : "",
                  }}
                  onDoubleClick={() => {
-                   setCurDir(decodeDirName)
+                   setCurDir(decodeDirName);
                  }}
                  onClick={e => {
                    selectDir(decodeDirName, e.metaKey)

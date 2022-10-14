@@ -7,6 +7,8 @@ import Headers from "./Headers";
 const fsUrl = `${Config.server}/fs/`;
 const uploadUrlPrefix = `${Config.server}/fs`;
 const uploadDirUrlPrefix = `${Config.server}/fs-delete-dir`;
+const copyFileUrlPrefix = `${Config.server}/fs-copy-file/`;
+const copyDirUrlPrefix = `${Config.server}/fs-copy-dir/`;
 
 const FilesApi = {
   fsFiles: async (token) => {
@@ -24,7 +26,6 @@ const FilesApi = {
     const resp = await axios.post(`${uploadUrlPrefix}${filePath}`, formData, config);
     return resp.data;
   },
-
 
   deleteFile: async (token, filePath) => {
     const config = {
@@ -48,6 +49,27 @@ const FilesApi = {
     return resp.data;
   },
 
+  copyFile: async (token, formData) => {
+    const config = {
+      headers: {
+        'content-type': 'application/json',
+        Authorization: "Bearer " + token,
+      },
+    };
+    const resp = await axios.post(`${copyFileUrlPrefix}`, formData, config);
+    return resp.data;
+  },
+
+  copyDir: async (token, formData) => {
+    const config = {
+      headers: {
+        'content-type': 'application/json',
+        Authorization: "Bearer " + token,
+      },
+    };
+    const resp = await axios.post(`${copyDirUrlPrefix}`, formData, config);
+    return resp.data;
+  },
 };
 
 export default FilesApi;
